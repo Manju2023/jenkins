@@ -1,214 +1,140 @@
-🔷 Jenkins Master–Slave Architecture
-MASTER SERVER (Jenkins Installed)
-        │
-        │  SSH Connection
-        ▼
-SLAVE SERVER (Runs Builds)
+🔹 Step 1: Prepare the Slave Server
 
-Master schedules jobs → Slave executes jobs
-🖥️ 1️⃣ Steps in SLAVE SERVER
+Login to Slave Server via SSH.
 
-Login to the slave machine.
-
-Step 1: Install Java
-
-Jenkins agents require Java.
+Install Java (required for Jenkins agent):
 
 sudo apt update
 sudo apt install openjdk-17-jdk -y
-
-Check:
-
 java -version
-Step 2: Install SSH Server
+
+Install SSH Server (for Master → Slave communication):
+
 sudo apt install openssh-server -y
-
-Start SSH:
-
 sudo systemctl start ssh
 sudo systemctl enable ssh
-
-Check status:
-
 sudo systemctl status ssh
-Step 3: Create Jenkins User
+
+Create Jenkins User:
+
 sudo adduser jenkins
-
-Give sudo permission:
-
 sudo usermod -aG sudo jenkins
-Step 4: Check Slave IP
+
+Check Slave IP (needed for Master):
+
 ip a
+# Example: 172.31.41.70
+🔹 Step 2: Prepare the Master Server
 
-Example:
+Login to Master Server.
 
-172.31.41.70(private ip of slave)
+Install Java and Jenkins (if not already installed).
 
-Save this IP.
+Generate SSH Key (for passwordless connection to Slave):
 
-🖥️ 2️⃣ Steps in MASTER SERVER
-
-Login to the master machine (Jenkins installed).
-
-install java and jenkins
-
-Step 1: Generate SSH Key
 ssh-keygen -t ed25519
+# Press Enter for all prompts
 
-Press Enter for all questions.
+Files created: ~/.ssh/id_ed25519 (private key) and ~/.ssh/id_ed25519.pub (public key)
 
-Files created:
+🔹 Step 3: Add Master Public Key to Slave
 
-~/.ssh/id_ed25519
-~/.ssh/id_ed25519.pub
-🔑 3️⃣ Add Master Public Key to Slave
+Switch to Jenkins user on Slave:
 
-
-
-1️⃣ Switch to Jenkins User
 su - jenkins
 
-Enter the jenkins password.
+Create .ssh folder and set permissions:
 
-You should see:
-
-jenkins@slave:~$
-3️⃣ Create .ssh Folder
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-4️⃣ Add the Public Key
+
+Add Master's public key:
+
 nano ~/.ssh/authorized_keys
+# Paste content of ~/.ssh/id_ed25519.pub from Master
 
-Paste the public key from master:
+Set correct permissions:
 
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKBKlLDvlx9mo25MdaEHEGaTKFyjvKWT7/0/X8QtkVSz ubuntu@master
-
-Save:
-
-CTRL + X
-Y
-ENTER
-
-5️⃣ Set Correct Permissions
 chmod 600 ~/.ssh/authorized_keys
-4️⃣ Test Connection From MASTER
+🔹 Step 4: Test SSH Connection from Master
 
-Go back to Master server:
+From Master server, run:
 
-ssh jenkins@<private ip of slave> 
+ssh jenkins@<slave-ip>
 
+Expected Result:
 
-Expected result:
+Connects to slave without asking for a password
 
-jenkins@slave:~$
+Exit with: exit
 
-No password should be asked.
+🔹 Step 5: Configure Slave in Jenkins UI
 
-Exit:
+Login to Jenkins UI → http://<master-ip>:8080.
 
-exit
-🌐 5️⃣ Steps in JENKINS UI
+Create New Node:
 
-Open Jenkins:
-
-http://<MASTER-IP>:8080
-Step 1: Create New Node
-
-Navigate:
-
-Manage Jenkins
-      ↓
-Manage Nodes and Clouds
-      ↓
-New Node
-
-Enter:
+Navigate: Manage Jenkins → Manage Nodes and Clouds → New Node
 
 Name: slave1
-Type: Permanent Agent
 
-Click Create.
+Type: Permanent Agent → Click Create
 
-Step 2: Configure Node
+Configure Node:
+
 Remote root directory: /home/jenkins
-Labels: slave
-Usage: Use this node as much as possible
-Launch method: Launch agents via SSH
-Host: <private ip of slave>
-Step 3: Add Credentials
 
-Click Add Credentials
+Labels: slave
+
+Usage: Use this node as much as possible
+
+Launch method: Launch agents via SSH
+
+Host: <slave-ip>
+
+Add SSH Credentials:
 
 Kind: SSH Username with private key
-Username: jenkins
-Private Key: Enter directly
 
-On Master server run:
+Username: jenkins
+
+Private Key: Copy from Master
 
 cat ~/.ssh/id_ed25519
+# Paste in Jenkins → Add
 
-Copy everything:
+Save Node:
 
------BEGIN OPENSSH PRIVATE KEY-----
-....
------END OPENSSH PRIVATE KEY-----
+Jenkins automatically connects
 
-Paste in Jenkins → Add.
+Copies agent.jar
 
-Step 4: Save Node
+Starts the agent
 
-Click Save.
+Status should show: Agent successfully connected
 
-Jenkins will automatically:
+🔹 Step 6: Test Slave Agent
 
-1️⃣ Connect to slave using SSH
-2️⃣ Copy agent.jar
-3️⃣ Start the Jenkins agent
+Create a Freestyle Project:
 
-You will see:
+New Item → Freestyle Project
 
-Agent successfully connected
-🧪 6️⃣ Test the Slave Agent
+Restrict to run on slave:
 
-Create job.
+Check Restrict where this project can run
 
-New Item
-   ↓
-Freestyle Project
-
-Enable:
-
-Restrict where this project can run
 Label Expression: slave
 
-Add build step:
+Add a build step:
 
 hostname
 
-Run build.
+Run the build → Output should show Slave hostname, confirming the job runs on the slave.
 
-Output should show:
+✅ All steps completed!
 
-slave
-✅ Final Working Flow
-SLAVE SERVER
-Install Java
-Install SSH
-Create jenkins user
-Get IP address
-        ▲
-        │
-MASTER SERVER
-ssh-keygen
-Add public key to slave
-ssh-copy-id jenkins@slave-ip
-Test ssh connection
-        ▲
-        │
-JENKINS UI
-Create node
-Add SSH credentials
-Connect agent
-        ▲
-        │
-BUILD JOB RUNS ON SLAVE
+Master schedules jobs
+
+Slave executes builds
+
+Jenkins Agent setup is successful.
