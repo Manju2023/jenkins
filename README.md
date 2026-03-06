@@ -95,7 +95,8 @@ chmod 600 ~/.ssh/authorized_keys
 
 Go back to Master server:
 
-ssh jenkins@172.31.41.70
+ssh jenkins@<private ip of slave> 
+
 
 Expected result:
 
@@ -133,7 +134,7 @@ Remote root directory: /home/jenkins
 Labels: slave
 Usage: Use this node as much as possible
 Launch method: Launch agents via SSH
-Host: 172.31.41.70(private ip of slave)
+Host: <private ip of slave>
 Step 3: Add Credentials
 
 Click Add Credentials
